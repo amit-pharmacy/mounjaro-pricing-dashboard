@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mounjaro Pricing Intelligence Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;background:#f5f6fa;color:#1a1a2e;line-height:1.5}
+#pw-overlay{position:fixed;inset:0;background:#f5f6fa;z-index:9999;display:flex;align-items:center;justify-content:center}
+#pw-box{background:#fff;border-radius:16px;padding:48px;box-shadow:0 8px 32px rgba(0,0,0,.08);text-align:center;max-width:400px;width:90%}
+#pw-box h2{font-size:1.5rem;margin-bottom:8px}
+#pw-box p{color:#64748b;margin-bottom:24px;font-size:.9rem}
+#pw-box input{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:8px;font-size:1rem;outline:none;transition:.2s}
+#pw-box input:focus{border-color:#059669}
+#pw-box button{margin-top:16px;width:100%;padding:12px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;transition:.2s}
+#pw-box button:hover{background:#047857}
+#pw-error{color:#dc2626;font-size:.85rem;margin-top:8px;display:none}
+.container{max-width:1400px;margin:0 auto;padding:16px}
+header{background:#fff;border-bottom:1px solid #e2e8f0;padding:16px 0;position:sticky;top:0;z-index:100}
+.header-inner{max-width:1400px;margin:0 auto;padding:0 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.header-left h1{font-size:1.3rem;font-weight:700;color:#1a1a2e}
+.header-left .subtitle{font-size:.8rem;color:#64748b}
+.date-badge{background:#f0fdf4;color:#059669;padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600;border:1px solid #bbf7d0}
+.tab-bar{display:flex;gap:4px;background:#fff;padding:6px;border-radius:12px;margin:20px auto 0;max-width:700px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.tab-btn{flex:1;padding:10px 16px;border:none;background:transparent;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;color:#64748b;transition:.2s;white-space:nowrap}
+.tab-btn.active{background:#059669;color:#fff;box-shadow:0 2px 8px rgba(5,150,105,.3)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.hero{background:linear-gradient(135deg,#059669,#10b981);color:#fff;border-radius:16px;padding:28px 32px;margin:20px 0;box-shadow:0 4px 16px rgba(5,150,105,.2)}
+.hero h2{font-size:1.15rem;font-weight:700;margin-bottom:4px}
+.hero .hero-sub{font-size:.8rem;opacity:.85;margin-bottom:16px}
+.hero-prices{display:flex;flex-wrap:wrap;gap:12px}
+.hero-price{background:rgba(255,255,255,.18);border-radius:10px;padding:10px 16px;text-align:center;min-width:100px;backdrop-filter:blur(4px)}
+.hero-price .dose{font-size:.7rem;opacity:.8;text-transform:uppercase;letter-spacing:.5px}
+.hero-price .price{font-size:1.3rem;font-weight:800}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:20px 0}
+.kpi{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.kpi .kpi-label{font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kpi .kpi-value{font-size:1.6rem;font-weight:800;color:#1a1a2e}
+.kpi .kpi-detail{font-size:.78rem;color:#64748b;margin-top:2px}
+.kpi.green .kpi-value{color:#059669}
+.card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:20px}
+.card h3{font-size:1rem;font-weight:700;margin-bottom:16px;color:#1a1a2e}
+.card h3 .badge{font-size:.7rem;background:#f0fdf4;color:#059669;padding:3px 10px;border-radius:12px;font-weight:600;margin-left:8px;vertical-align:middle}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+.bar-group{margin-bottom:16px}
+.bar-label{font-size:.78rem;font-weight:600;margin-bottom:4px;color:#475569}
+.bar-track{background:#f1f5f9;border-radius:6px;height:32px;position:relative}
+.bar-range{position:absolute;height:100%;background:linear-gradient(90deg,#e2e8f0,#cbd5e1);border-radius:6px}
+.bar-ours{position:absolute;height:100%;width:4px;background:#059669;border-radius:2px;z-index:2}
+.bar-ours::after{content:attr(data-price);position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:.68rem;font-weight:700;color:#059669;white-space:nowrap}
+.bar-min-label{position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:.68rem;color:#64748b;font-weight:500;z-index:1}
+.bar-max-label{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:.68rem;color:#64748b;font-weight:500;z-index:1}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{background:#f8fafc;color:#64748b;font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.5px;padding:10px 12px;text-align:left;border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:1}
+td{padding:9px 12px;border-bottom:1px solid #f1f5f9}
+tr:hover{background:#f8fafc}
+tr.row-ours{background:#f0fdf4 !important;font-weight:700}
+tr.row-ours td{border-top:2px solid #10b981;border-bottom:2px solid #10b981;color:#059669}
+.price-cell{font-weight:600;font-variant-numeric:tabular-nums}
+.saving{color:#059669;font-weight:700}
+.more-expensive{color:#dc2626;font-weight:600}
+.na-cell{color:#cbd5e1}
+.rank-badge{display:inline-block;background:#f0fdf4;color:#059669;padding:2px 8px;border-radius:10px;font-weight:700;font-size:.7rem}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:600;white-space:nowrap}
+.tag-glasgow{background:#dbeafe;color:#1d4ed8}
+.tag-edinburgh{background:#fce7f3;color:#be185d}
+.tag-aberdeen{background:#fef3c7;color:#92400e}
+.tag-dundee{background:#e0e7ff;color:#4338ca}
+.tag-scotland{background:#f3e8ff;color:#7c3aed}
+.tag-uk-chain{background:#ffedd5;color:#c2410c}
+.tag-online{background:#f1f5f9;color:#475569}
+.tag-ours{background:#059669;color:#fff}
+.filter-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.filter-btn{padding:6px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:.75rem;font-weight:500;cursor:pointer;transition:.15s;color:#475569}
+.filter-btn:hover{border-color:#059669;color:#059669}
+.filter-btn.active{background:#059669;color:#fff;border-color:#059669}
+.winner-banner{background:linear-gradient(135deg,#059669,#047857);color:#fff;border-radius:12px;padding:20px 28px;text-align:center;margin:20px 0;font-size:1.1rem;font-weight:700;box-shadow:0 4px 16px rgba(5,150,105,.25)}
+.winner-banner .winner-sub{font-size:.8rem;font-weight:400;opacity:.85;margin-top:4px}
+.heatmap-table td{text-align:center;font-weight:600;font-size:.78rem}
+.heat-cheapest{background:#dcfce7;color:#166534}
+.heat-cheap{background:#f0fdf4;color:#15803d}
+.heat-mid{background:#fffbeb;color:#92400e}
+.heat-expensive{background:#fef2f2;color:#991b1b}
+.heat-most{background:#fee2e2;color:#7f1d1d}
+.heat-ours{background:#059669 !important;color:#fff !important}
+.view-btn{display:inline-block;padding:4px 10px;background:#f0fdf4;color:#059669;border-radius:6px;font-size:.7rem;font-weight:600;text-decoration:none;border:1px solid #bbf7d0;transition:.15s}
+.view-btn:hover{background:#059669;color:#fff}
+.strength-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.strength-tab{padding:8px 16px;border:2px solid #e2e8f0;background:#fff;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s}
+.strength-tab:hover{border-color:#059669}
+.strength-tab.active{background:#059669;color:#fff;border-color:#059669}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;border:1px solid #e2e8f0}
+.table-scroll table{min-width:900px}
+footer{text-align:center;padding:32px 16px;color:#94a3b8;font-size:.75rem;border-top:1px solid #e2e8f0;margin-top:32px}
+footer .source{margin-bottom:4px;font-weight:600;color:#64748b}
+.split-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}
+@media(max-width:768px){.split-cards{grid-template-columns:1fr}}
+.split-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.split-card h3{font-size:.95rem;font-weight:700;margin-bottom:4px}
+.split-card .sc-sub{font-size:.75rem;color:#64748b;margin-bottom:16px}
+.split-card table td,.split-card table th{padding:6px 10px;font-size:.78rem}
+.diff-positive{color:#059669;font-weight:700}
+.diff-negative{color:#dc2626;font-weight:700}
+@media(max-width:600px){
+  .header-inner{flex-direction:column;align-items:flex-start}
+  .hero-prices{gap:8px}
+  .hero-price{min-width:80px;padding:8px 10px}
+  .hero-price .price{font-size:1.1rem}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .kpi .kpi-value{font-size:1.2rem}
+}
+</style>
+</head>
+<body>
+
+<div id="pw-overlay">
+  <div id="pw-box">
+    <h2>Mounjaro Pricing Intel</h2>
+    <p>Enter the password to access this dashboard</p>
+    <input type="password" id="pw-input" placeholder="Password" autocomplete="off">
+    <div id="pw-error">Incorrect password. Try again.</div>
+    <button id="pw-btn" onclick="checkPw()">Access Dashboard</button>
+  </div>
+</div>
+
+<header>
+  <div class="header-inner">
+    <div class="header-left">
+      <h1>Mounjaro Pricing Intelligence</h1>
+      <div class="subtitle">Competitive analysis &amp; market positioning</div>
+    </div>
+    <div class="date-badge">Data scraped 1 April 2026</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab(0)">Scotland &amp; UK Benchmarking</button>
+    <button class="tab-btn" onclick="switchTab(1)">Full UK Market (67 Pharmacies)</button>
+  </div>
+
+  <div class="hero">
+    <h2>Our Proposed Pricing</h2>
+    <div class="hero-sub">All-inclusive: consultation, medication, needles, free P&amp;P</div>
+    <div class="hero-prices">
+      <div class="hero-price"><div class="dose">2.5mg</div><div class="price">&pound;145</div></div>
+      <div class="hero-price"><div class="dose">5mg</div><div class="price">&pound;160</div></div>
+      <div class="hero-price"><div class="dose">7.5mg</div><div class="price">&pound;205</div></div>
+      <div class="hero-price"><div class="dose">10mg</div><div class="price">&pound;230</div></div>
+      <div class="hero-price"><div class="dose">12.5mg</div><div class="price">&pound;260</div></div>
+      <div class="hero-price"><div class="dose">15mg</div><div class="price">&pound;280</div></div>
+    </div>
+  </div>
+
+  <div id="tab-0" class="tab-content active"></div>
+  <div id="tab-1" class="tab-content"></div>
+</div>
+
+<footer>
+  <div class="source">JaroPrices.co.uk (67 pharmacies) | Monj.co.uk | Provider websites</div>
+  All prices in &pound; per pen (4 weekly doses). Prices from provider websites &amp; JaroPrices.co.uk. Discount prices reflect first-order codes where noted. Always verify on provider site.
+</footer>
+
+<script>
+(function(){
+  if(sessionStorage.getItem('mj_auth')==='1'){document.getElementById('pw-overlay').style.display='none'}
+  document.getElementById('pw-input').addEventListener('keydown',function(e){if(e.key==='Enter')checkPw()});
+  setTimeout(function(){document.getElementById('pw-input').focus()},100);
+})();
+function checkPw(){
+  if(document.getElementById('pw-input').value==='mounjaro'){
+    sessionStorage.setItem('mj_auth','1');
+    document.getElementById('pw-overlay').style.display='none';
+  } else {
+    document.getElementById('pw-error').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+var strengths=['2.5mg','5mg','7.5mg','10mg','12.5mg','15mg'];
+var ourPrices=[145,160,205,230,260,280];
+
+var providers=[
+  {name:"OUR PROPOSED PRICING",location:"Glasgow",type:"In-Person Clinic (Online delivery)",prices:[145,160,205,230,260,280],consult:"Included",url:"",notes:"All-inclusive: consultation, medication, needles, free P&P.",cat:"ours",inPerson:true,pp:"Free \u2014 included in price",ppFree:true,isOurs:true},
+  {name:"GP Matters",location:"Glasgow",type:"In-Person Clinic (Private GP)",prices:[200,250,300,325,350,375],consult:"\u00A3100 initial + \u00A3100/mo",url:"https://www.gpmatters.com/mounjaro.html",notes:"Multi-dose pen (4 doses). Separate consultation fees.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 in-person collection only",ppFree:false},
+  {name:"Doc Plus",location:"Glasgow",type:"In-Person Clinic (Private GP)",prices:[210,225,277,302,321,342],consult:"Free (\u00A350 if not qualifying)",url:"https://docplus.co.uk/weight-loss-injections-glasgow/mounjaro/",notes:"Face-to-face GP consultation included.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 in-person collection only",ppFree:false},
+  {name:"Sighthill Pharmacy",location:"Glasgow",type:"In-Person Pharmacy",prices:[165,185,240,270,290,310],consult:"Included",url:"https://sighthillpharmacy.co.uk/service/mounjaro-glasgow/",notes:"In-person pharmacist consultation.",cat:"glasgow",inPerson:true,pp:"Collection & delivery service available",ppFree:false},
+  {name:"Nadcell Clinic",location:"Glasgow",type:"In-Person Private Clinic",prices:[null,null,null,null,null,null],consult:"Free consultation",url:"https://nadcellclinic.com/weight-loss-injections-glasgow/",notes:"Starts at \u00A3115. Per-strength not published.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 in-person",ppFree:false},
+  {name:"Weight Loss Glasgow (Medicspot)",location:"Glasgow",type:"Online / Delivery",prices:[199,219,269,289,309,329],consult:"Included",url:"https://www.weightlossglasgow.co.uk/injections/mounjaro",notes:"\u00A3149 first month (\u00A350 off).",cat:"glasgow",inPerson:false,pp:"Free \u2014 fast, discreet delivery included",ppFree:true},
+  {name:"Battlefield Pharmacy",location:"Glasgow",type:"In-Person Pharmacy",prices:[null,null,null,null,null,null],consult:"\u2014",url:"https://battlefieldpharmacy.co.uk/book-mounjaro-weight-loss-injection-consultation/",notes:"No pricing published. Book for details.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 in-person",ppFree:false},
+  {name:"Carmunnock Pharmacy",location:"Glasgow",type:"In-Person Pharmacy",prices:[null,null,null,null,null,null],consult:"\u2014",url:"https://www.carmunnockpharmacy.co.uk/mounjaro-glasgow/",notes:"No pricing published.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 in-person",ppFree:false},
+  {name:"Southside Medical",location:"Glasgow",type:"In-Person Private Clinic",prices:[null,null,null,null,null,null],consult:"\u2014",url:"https://www.southsidemedical.co.uk/weight-loss-injections-glasgow",notes:"No pricing published.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 in-person",ppFree:false},
+  {name:"JM Aesthetics",location:"Glasgow",type:"In-Person Aesthetics Clinic",prices:[null,null,null,null,null,null],consult:"\u2014",url:"https://www.jmaesthetics.co.uk/weight-loss-treatment/",notes:"No pricing published.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 in-person",ppFree:false},
+  {name:"Mayfield Clinic",location:"Glasgow",type:"In-Person Private GP",prices:[null,null,null,null,null,null],consult:"\u00A3150 initial / \u00A3100 follow-up",url:"https://www.mayfieldclinic.co.uk/blog/private-gp-weight-loss-appointments-glasgow-mayfield-clinic",notes:"Consultation only \u2014 meds extra via pharmacy.",cat:"glasgow",inPerson:true,pp:"N/A \u2014 prescription to external pharmacy",ppFree:false},
+  {name:"Weight Loss Edinburgh (Medicspot)",location:"Edinburgh",type:"Online / Delivery",prices:[199,219,269,289,309,329],consult:"Included",url:"https://www.weightlossedinburgh.co.uk/injections/mounjaro",notes:"\u00A3149 first month (\u00A350 off).",cat:"edinburgh",inPerson:false,pp:"Free \u2014 fast, discreet delivery included",ppFree:true},
+  {name:"Pharmacy Clinic Edinburgh",location:"Edinburgh",type:"In-Person Pharmacy",prices:[165,185,240,265,285,300],consult:"\u00A320 consultation",url:"https://www.pharmacyclinicedinburgh.co.uk/in-person-weight-management-service",notes:"In-person. Needles, wipes, sharps bins included.",cat:"edinburgh",inPerson:true,pp:"N/A \u2014 in-person collection",ppFree:false},
+  {name:"Newington Pharmacy",location:"Edinburgh",type:"In-Person Pharmacy",prices:[null,null,null,null,null,null],consult:"Included",url:"https://www.newingtonpharmacy.org.uk/mounjaro-cost-edinburgh/",notes:"No per-strength pricing. Call for details.",cat:"edinburgh",inPerson:true,pp:"N/A \u2014 in-person",ppFree:false},
+  {name:"Weight Loss Aberdeen (Medicspot)",location:"Aberdeen",type:"Online / Delivery",prices:[199,219,269,289,309,329],consult:"Included",url:"https://www.aberdeenweightloss.co.uk/injections/mounjaro",notes:"\u00A3149 first month (\u00A350 off).",cat:"aberdeen",inPerson:false,pp:"Free \u2014 fast, discreet delivery included",ppFree:true},
+  {name:"Bucksburn Pharmacy",location:"Aberdeen",type:"In-Person Pharmacy",prices:[165,185,240,265,285,300],consult:"\u00A320 consultation",url:"https://bucksburnpharmacy.co.uk/services/weight-loss-injections/",notes:"In-person. Includes needles, wipes, sharps bins.",cat:"aberdeen",inPerson:true,pp:"Free prescription delivery across Aberdeen",ppFree:true},
+  {name:"Weight Loss Dundee (Medicspot)",location:"Dundee",type:"Online / Delivery",prices:[199,219,269,289,309,329],consult:"Included",url:"https://www.weightlossdundee.co.uk/injections/mounjaro",notes:"\u00A3149 first month (\u00A350 off).",cat:"dundee",inPerson:false,pp:"Free delivery included",ppFree:true},
+  {name:"Right Medicine Pharmacy",location:"Scotland (multiple)",type:"In-Person Pharmacy",prices:[null,null,null,null,null,null],consult:"Included",url:"https://rightmedicinepharmacy.co.uk/how-much-is-mounjaro-scotland/",notes:"Starts from \u00A3175. Multiple Scottish locations.",cat:"scotland",inPerson:true,pp:"In-person collection at branches",ppFree:false},
+  {name:"Boots Online Doctor",location:"UK-wide",type:"Online + In-Store",prices:[176.97,189.97,267.97,302.97,314.97,334.97],consult:"Included",url:"https://onlinedoctor.boots.com/treatments/mounjaro",notes:"First order must be collected in store.",cat:"uk-chain",inPerson:false,pp:"1st order: free in-store collection. Delivery unclear",ppFree:false},
+  {name:"Well Pharmacy",location:"UK-wide",type:"Online Pharmacy",prices:[153.95,203.95,253.95,289,309,319],consult:"Included",url:"https://well.co.uk/weight-management/mounjaro/",notes:"Online consultation. Delivery or collection.",cat:"uk-chain",inPerson:false,pp:"Delivery available \u2014 charge not specified",ppFree:false},
+  {name:"Superdrug Online Doctor",location:"UK-wide",type:"Online + In-Store",prices:[199.5,249.5,299.5,339.5,349.5,374.5],consult:"Included",url:"https://onlinedoctor.superdrug.com/mounjaro.html",notes:"Most expensive major chain.",cat:"uk-chain",inPerson:false,pp:"\u00A34.50 cold delivery. Free in-store next day",ppFree:false},
+  {name:"Lloyds Pharmacy",location:"UK-wide",type:"Online Pharmacy",prices:[145.94,155.94,215.94,245.94,265.94,275.94],consult:"Included (\u00A340 off 1st)",url:"https://onlinedoctor.lloydspharmacy.com/",notes:"With first order discount applied.",cat:"uk-chain",inPerson:false,pp:"Incl. in price (Monj confirms P&P in listed price)",ppFree:true},
+  {name:"Asda Online Doctor",location:"UK-wide",type:"Online + In-Store",prices:[152.47,192.47,252.47,282.47,292.47,302.47],consult:"Included",url:"https://onlinedoctor.asda.com/uk/mounjaro.html",notes:"No discount codes available.",cat:"uk-chain",inPerson:false,pp:"Free same-day Asda collection. Next-day home delivery",ppFree:true},
+  {name:"Medicspot (direct)",location:"Online",type:"Online Pharmacy",prices:[149,169,219,239,259,279],consult:"Included (sub)",url:"https://www.medicspot.co.uk/weight-loss/injections/mounjaro-uk",notes:"Powers WL Glasgow/Edinburgh/Aberdeen/Dundee sites.",cat:"online",inPerson:false,pp:"Free \u2014 secure home delivery included",ppFree:true},
+  {name:"Phlo Clinic",location:"Online",type:"Online Pharmacy",prices:[169,199,249,279,299,319],consult:"Included",url:"https://phloclinic.co.uk/weight-loss-service/mounjaro",notes:"Online consultation and delivery.",cat:"online",inPerson:false,pp:"Free Royal Mail Tracked 24 (temp-controlled)",ppFree:true},
+  {name:"Cloud Pharmacy",location:"Online",type:"Online Pharmacy",prices:[169.28,179.28,239.28,264.28,279.28,299.28],consult:"Included",url:"https://www.cloudpharmacy.co.uk/online-doctor/weight-loss-treatments/mounjaro-weight-loss-injection/",notes:"Discreet next-day delivery via Royal Mail.",cat:"online",inPerson:false,pp:"Free next-day via Royal Mail",ppFree:true},
+  {name:"EveryDayMeds",location:"Online",type:"Online Pharmacy",prices:[144.99,174.99,224.99,244.99,274.99,293.99],consult:"Included",url:"https://everydaymeds.co.uk/pages/private-pharmacy-clinic-mounjaro-lowest-price-uk-everydaymeds",notes:"\u00A330 off 1st (FIRST30). \u00A325 off returning.",cat:"online",inPerson:false,pp:"Free next-day delivery included",ppFree:true},
+  {name:"Simple Online Pharmacy",location:"Online",type:"Online Pharmacy",prices:[133,163.99,223.99,263.99,273.99,283.99],consult:"Included (\u00A340 off 1st)",url:"https://www.simpleonlinepharmacy.co.uk/online-doctor/weight-loss/mounjaro/",notes:"With first order discount.",cat:"online",inPerson:false,pp:"Express 1-2 days. Same-day dispatch",ppFree:true},
+  {name:"The Independent Pharmacy",location:"Online",type:"Online Pharmacy",prices:[143.99,159.99,207.99,231.99,243.99,259.99],consult:"Included (20% off 1st)",url:"https://www.theindependentpharmacy.co.uk/weight-loss/mounjaro-injections",notes:"With 20% first order discount.",cat:"online",inPerson:false,pp:"Free over \u00A340. Otherwise \u00A32.99 tracked",ppFree:true}
+];
+
+var jaro={
+'2.5mg':[{"name":"My London Pharmacy","new":101.50,"repeat":145.00},{"name":"Pharmica","new":104.99,"repeat":159.99},{"name":"Farmeci","new":119.00,"repeat":119.00},{"name":"Pills2U","new":123.99,"repeat":145.99},{"name":"Cuva Health","new":124.99,"repeat":135.99},{"name":"WeightLess","new":125.00,"repeat":160.00},{"name":"Pharmacy2U","new":126.24,"repeat":173.24},{"name":"The Care Pharmacy","new":127.49,"repeat":149.99},{"name":"My Online Pharmacy","new":129.00,"repeat":129.00},{"name":"Zava","new":129.99,"repeat":169.99},{"name":"Slimming Direct","new":130.00,"repeat":125.00},{"name":"Simple Online Pharmacy","new":133.00,"repeat":169.00},{"name":"PillSphere","new":133.95,"repeat":162.04},{"name":"Get Weightloss","new":133.99,"repeat":133.99},{"name":"The Family Chemist","new":134.99,"repeat":139.99},{"name":"Shape8","new":135.00,"repeat":135.00},{"name":"Medicine Market Place","new":137.00,"repeat":137.00},{"name":"Ayp Healthcare","new":137.99,"repeat":137.99},{"name":"OnlineMeds","new":137.99,"repeat":167.99},{"name":"Swift Doctor","new":139.00,"repeat":149.00},{"name":"Curely","new":139.59,"repeat":139.59},{"name":"e-Surgery","new":139.95,"repeat":164.65},{"name":"Online Clinic","new":139.99,"repeat":174.99},{"name":"PillTime","new":139.99,"repeat":167.99},{"name":"My Health & Wellness","new":139.99,"repeat":179.99},{"name":"Happy Pharmacy","new":139.99,"repeat":139.99},{"name":"Pharmacy Online","new":140.49,"repeat":145.00},{"name":"WePrescribe","new":143.99,"repeat":159.99},{"name":"Live Well Weight Loss","new":144.00,"repeat":144.00},{"name":"Pharmulous","new":144.98,"repeat":139.99},{"name":"Dr Weightmans","new":145.00,"repeat":145.00},{"name":"Click 2 Pharmacy","new":145.99,"repeat":145.99},{"name":"Tribelle","new":147.00,"repeat":147.00},{"name":"Medino","new":147.99,"repeat":147.99},{"name":"Chemist4U","new":148.00,"repeat":148.00},{"name":"Asda","new":148.97,"repeat":148.97},{"name":"Envigore","new":149.00,"repeat":220.00},{"name":"Well Pharmacy","new":149.00,"repeat":149.00},{"name":"Medicspot","new":149.00,"repeat":199.00},{"name":"Pharmacy Express","new":149.99,"repeat":144.99},{"name":"Ashcroft Pharmacy","new":149.99,"repeat":149.99},{"name":"Oxford Online Pharmacy","new":149.99,"repeat":149.99},{"name":"MediHealth Direct","new":150.00,"repeat":137.70},{"name":"YourPharmacy","new":153.00,"repeat":168.00},{"name":"Pharmacy Advance","new":154.99,"repeat":154.99},{"name":"Private Doc","new":157.00,"repeat":157.00},{"name":"PillSorted","new":159.00,"repeat":179.99},{"name":"Get A Drip","new":159.00,"repeat":159.00},{"name":"Bolt Pharmacy","new":159.00,"repeat":159.00},{"name":"Quickmeds","new":160.94,"repeat":169.95},{"name":"Simply Meds Online","new":164.99,"repeat":164.99},{"name":"Cloud Pharmacy","new":164.99,"repeat":164.99},{"name":"Hey Slim","new":169.00,"repeat":129.00},{"name":"Oushk","new":169.00,"repeat":169.00},{"name":"myBMI","new":169.00,"repeat":169.00},{"name":"Click Pharmacy","new":169.99,"repeat":169.99},{"name":"IQ Doctor","new":174.99,"repeat":174.99},{"name":"SuperDrug","new":176.00,"repeat":176.00},{"name":"Boots","new":176.97,"repeat":176.97},{"name":"The Independent Pharmacy","new":179.99,"repeat":179.99},{"name":"MedExpress","new":179.99,"repeat":179.99},{"name":"MSH Weight Loss","new":189.00,"repeat":189.00},{"name":"Voy","new":194.00,"repeat":214.00},{"name":"Juniper","new":199.00,"repeat":199.00},{"name":"Numan","new":209.00,"repeat":209.00},{"name":"Lotus Weight Loss","new":302.25,"repeat":155.00},{"name":"Lloyds Pharmacy","new":339.98,"repeat":179.99}],
+'5mg':[{"name":"PillTime","new":139.99,"repeat":182.49},{"name":"Pills2U","new":142.99,"repeat":164.98},{"name":"Pharmica","new":144.99,"repeat":199.99},{"name":"Pharmacy2U","new":146.24,"repeat":196.24},{"name":"Zava","new":147.99,"repeat":187.99},{"name":"My Health & Wellness","new":149.99,"repeat":189.99},{"name":"OnlineMeds","new":152.49,"repeat":182.49},{"name":"PillSphere","new":153.95,"repeat":184.04},{"name":"Medicine Market Place","new":154.00,"repeat":154.00},{"name":"My Online Pharmacy","new":159.00,"repeat":159.00},{"name":"Swift Doctor","new":159.00,"repeat":169.00},{"name":"The Family Chemist","new":159.97,"repeat":164.97},{"name":"Online Clinic","new":159.99,"repeat":199.99},{"name":"Get Weightloss","new":160.00,"repeat":160.00},{"name":"Dr Weightmans","new":160.00,"repeat":160.00},{"name":"WeightLess","new":160.00,"repeat":195.00},{"name":"My London Pharmacy","new":161.10,"repeat":179.00},{"name":"The Care Pharmacy","new":162.49,"repeat":184.99},{"name":"Simple Online Pharmacy","new":163.99,"repeat":199.99},{"name":"Pharmacy Express","new":164.99,"repeat":164.99},{"name":"Ayp Healthcare","new":164.99,"repeat":164.99},{"name":"Ashcroft Pharmacy","new":164.99,"repeat":164.99},{"name":"Slimming Direct","new":165.00,"repeat":160.00},{"name":"Pharmacy Online","new":165.48,"repeat":169.99},{"name":"WePrescribe","new":166.49,"repeat":184.99},{"name":"Live Well Weight Loss","new":169.00,"repeat":169.00},{"name":"Medicspot","new":169.00,"repeat":219.00},{"name":"e-Surgery","new":169.95,"repeat":199.95},{"name":"Pharmulous","new":169.98,"repeat":164.99},{"name":"Tribelle","new":170.00,"repeat":170.00},{"name":"Farmeci","new":173.00,"repeat":173.00},{"name":"Cuva Health","new":173.98,"repeat":174.99},{"name":"Click 2 Pharmacy","new":173.99,"repeat":173.99},{"name":"Envigore","new":174.00,"repeat":249.00},{"name":"YourPharmacy","new":174.00,"repeat":189.00},{"name":"Cloud Pharmacy","new":174.99,"repeat":174.99},{"name":"Pharmacy Advance","new":174.99,"repeat":174.99},{"name":"Happy Pharmacy","new":174.99,"repeat":174.99},{"name":"PillSorted","new":179.00,"repeat":199.99},{"name":"Get A Drip","new":179.00,"repeat":179.00},{"name":"Bolt Pharmacy","new":179.00,"repeat":179.00},{"name":"Simply Meds Online","new":179.99,"repeat":179.99},{"name":"Medino","new":179.99,"repeat":179.99},{"name":"Shape8","new":179.99,"repeat":179.99},{"name":"Quickmeds","new":180.94,"repeat":189.95},{"name":"Curely","new":185.00,"repeat":185.00},{"name":"Private Doc","new":187.00,"repeat":187.00},{"name":"Chemist4U","new":188.00,"repeat":188.00},{"name":"Oxford Online Pharmacy","new":188.96,"repeat":188.96},{"name":"Asda","new":188.97,"repeat":188.97},{"name":"Hey Slim","new":189.00,"repeat":149.00},{"name":"Oushk","new":189.00,"repeat":189.00},{"name":"SuperDrug","new":189.00,"repeat":189.00},{"name":"Well Pharmacy","new":189.00,"repeat":189.00},{"name":"Boots","new":189.97,"repeat":189.97},{"name":"Click Pharmacy","new":189.99,"repeat":189.99},{"name":"MedExpress","new":189.99,"repeat":189.99},{"name":"IQ Doctor","new":194.99,"repeat":194.99},{"name":"myBMI","new":198.00,"repeat":198.00},{"name":"The Independent Pharmacy","new":199.99,"repeat":199.99},{"name":"MSH Weight Loss","new":209.00,"repeat":209.00},{"name":"MediHealth Direct","new":209.99,"repeat":165.99},{"name":"Voy","new":224.00,"repeat":244.00},{"name":"Juniper","new":229.00,"repeat":229.00},{"name":"Numan","new":239.00,"repeat":239.00},{"name":"Lotus Weight Loss","new":331.50,"repeat":170.00},{"name":"Lloyds Pharmacy","new":359.98,"repeat":189.99}],
+'7.5mg':[{"name":"Medicine Market Place","new":135.00,"repeat":135.00},{"name":"Bolt Pharmacy","new":179.00,"repeat":179.00},{"name":"PillTime","new":189.99,"repeat":189.99},{"name":"Farmeci","new":195.00,"repeat":195.00},{"name":"Pills2U","new":196.98,"repeat":218.98},{"name":"Pharmacy2U","new":201.24,"repeat":244.99},{"name":"PillSphere","new":202.95,"repeat":235.04},{"name":"OnlineMeds","new":203.99,"repeat":233.99},{"name":"Pharmica","new":204.99,"repeat":259.99},{"name":"My Online Pharmacy","new":205.00,"repeat":205.00},{"name":"Online Clinic","new":207.99,"repeat":259.99},{"name":"MediHealth Direct","new":207.99,"repeat":207.99},{"name":"Get Weightloss","new":208.50,"repeat":208.50},{"name":"Ayp Healthcare","new":208.99,"repeat":208.99},{"name":"My Health & Wellness","new":209.99,"repeat":249.99},{"name":"Zava","new":209.99,"repeat":249.99},{"name":"The Family Chemist","new":211.15,"repeat":216.15},{"name":"The Care Pharmacy","new":212.49,"repeat":234.99},{"name":"Dr Weightmans","new":214.00,"repeat":214.00},{"name":"Curely","new":214.20,"repeat":238.00},{"name":"Pharmulous","new":214.99,"repeat":214.99},{"name":"WeightLess","new":215.00,"repeat":250.00},{"name":"Swift Doctor","new":215.00,"repeat":225.00},{"name":"My London Pharmacy","new":215.10,"repeat":239.00},{"name":"WePrescribe","new":215.99,"repeat":239.99},{"name":"Medicspot","new":219.00,"repeat":269.00},{"name":"Slimming Direct","new":220.00,"repeat":225.00},{"name":"Click 2 Pharmacy","new":222.99,"repeat":222.99},{"name":"Simple Online Pharmacy","new":223.99,"repeat":259.99},{"name":"Tribelle","new":224.00,"repeat":224.00},{"name":"Envigore","new":224.00,"repeat":299.00},{"name":"Pharmacy Express","new":224.99,"repeat":224.99},{"name":"Ashcroft Pharmacy","new":224.99,"repeat":224.99},{"name":"Live Well Weight Loss","new":225.00,"repeat":225.00},{"name":"Cuva Health","new":228.98,"repeat":229.99},{"name":"PillSorted","new":229.00,"repeat":229.00},{"name":"Get A Drip","new":229.00,"repeat":229.00},{"name":"Happy Pharmacy","new":229.99,"repeat":229.99},{"name":"Shape8","new":229.99,"repeat":229.99},{"name":"Cloud Pharmacy","new":234.99,"repeat":234.99},{"name":"Pharmacy Online","new":235.48,"repeat":239.99},{"name":"Private Doc","new":237.00,"repeat":237.00},{"name":"e-Surgery","new":237.96,"repeat":279.95},{"name":"YourPharmacy","new":239.00,"repeat":254.00},{"name":"Quickmeds","new":239.94,"repeat":249.95},{"name":"Click Pharmacy","new":239.99,"repeat":239.99},{"name":"Oushk","new":244.00,"repeat":244.00},{"name":"IQ Doctor","new":244.99,"repeat":244.99},{"name":"Pharmacy Advance","new":244.99,"repeat":244.99},{"name":"myBMI","new":248.00,"repeat":248.00},{"name":"Chemist4U","new":248.00,"repeat":248.00},{"name":"Oxford Online Pharmacy","new":248.96,"repeat":248.96},{"name":"Asda","new":248.97,"repeat":248.97},{"name":"Hey Slim","new":249.00,"repeat":209.00},{"name":"MSH Weight Loss","new":249.00,"repeat":249.00},{"name":"Well Pharmacy","new":249.00,"repeat":249.00},{"name":"Simply Meds Online","new":249.99,"repeat":249.99},{"name":"MedExpress","new":249.99,"repeat":249.99},{"name":"Medino","new":249.99,"repeat":249.99},{"name":"The Independent Pharmacy","new":259.99,"repeat":259.99},{"name":"SuperDrug","new":267.00,"repeat":267.00},{"name":"Boots","new":267.97,"repeat":267.97},{"name":"Voy","new":274.00,"repeat":294.00},{"name":"Juniper","new":279.00,"repeat":279.00},{"name":"Numan","new":289.00,"repeat":289.00},{"name":"Lotus Weight Loss","new":430.95,"repeat":221.00},{"name":"Lloyds Pharmacy","new":479.98,"repeat":249.99}],
+'10mg':[{"name":"Farmeci","new":195.00,"repeat":195.00},{"name":"Bolt Pharmacy","new":199.00,"repeat":199.00},{"name":"PillTime","new":219.99,"repeat":258.49},{"name":"Pills2U","new":221.99,"repeat":243.99},{"name":"OnlineMeds","new":228.49,"repeat":258.49},{"name":"Medicine Market Place","new":229.00,"repeat":229.00},{"name":"Pharmica","new":229.99,"repeat":284.99},{"name":"WePrescribe","new":232.19,"repeat":257.99},{"name":"My London Pharmacy","new":233.10,"repeat":259.00},{"name":"PillSphere","new":233.95,"repeat":262.04},{"name":"The Family Chemist","new":233.99,"repeat":238.99},{"name":"Envigore","new":234.00,"repeat":305.00},{"name":"My Online Pharmacy","new":235.00,"repeat":235.00},{"name":"Dr Weightmans","new":235.00,"repeat":235.00},{"name":"Pharmacy2U","new":236.24,"repeat":286.24},{"name":"The Care Pharmacy","new":237.49,"repeat":259.99},{"name":"Get Weightloss","new":238.47,"repeat":238.47},{"name":"Medicspot","new":239.00,"repeat":289.00},{"name":"Swift Doctor","new":239.00,"repeat":249.00},{"name":"Online Clinic","new":239.99,"repeat":299.99},{"name":"Ayp Healthcare","new":239.99,"repeat":239.99},{"name":"My Health & Wellness","new":239.99,"repeat":279.99},{"name":"Zava","new":239.99,"repeat":279.99},{"name":"WeightLess","new":240.00,"repeat":275.00},{"name":"Pharmulous","new":244.98,"repeat":239.99},{"name":"Pharmacy Express","new":244.99,"repeat":244.99},{"name":"Shape8","new":244.99,"repeat":244.99},{"name":"Live Well Weight Loss","new":249.00,"repeat":249.00},{"name":"Ashcroft Pharmacy","new":249.99,"repeat":249.99},{"name":"Click 2 Pharmacy","new":249.99,"repeat":249.99},{"name":"Tribelle","new":250.00,"repeat":250.00},{"name":"Slimming Direct","new":250.00,"repeat":245.00},{"name":"Happy Pharmacy","new":254.99,"repeat":254.99},{"name":"Cuva Health","new":258.98,"repeat":259.99},{"name":"PillSorted","new":259.00,"repeat":279.99},{"name":"Get A Drip","new":259.00,"repeat":259.00},{"name":"Cloud Pharmacy","new":259.99,"repeat":259.99},{"name":"YourPharmacy","new":260.00,"repeat":275.00},{"name":"Curely","new":260.00,"repeat":260.00},{"name":"Simple Online Pharmacy","new":263.99,"repeat":299.99},{"name":"Pharmacy Online","new":265.48,"repeat":269.99},{"name":"Private Doc","new":267.00,"repeat":267.00},{"name":"e-Surgery","new":267.71,"repeat":319.95},{"name":"Click Pharmacy","new":269.99,"repeat":269.99},{"name":"Medino","new":269.99,"repeat":269.99},{"name":"Simply Meds Online","new":274.99,"repeat":274.99},{"name":"IQ Doctor","new":274.99,"repeat":274.99},{"name":"Pharmacy Advance","new":274.99,"repeat":274.99},{"name":"Quickmeds","new":275.94,"repeat":289.95},{"name":"myBMI","new":278.00,"repeat":278.00},{"name":"Chemist4U","new":278.00,"repeat":278.00},{"name":"Oxford Online Pharmacy","new":278.96,"repeat":278.96},{"name":"Asda","new":278.97,"repeat":278.97},{"name":"Hey Slim","new":279.00,"repeat":239.00},{"name":"Oushk","new":279.00,"repeat":279.00},{"name":"MedExpress","new":279.99,"repeat":279.99},{"name":"MSH Weight Loss","new":289.00,"repeat":289.00},{"name":"Well Pharmacy","new":289.00,"repeat":289.00},{"name":"The Independent Pharmacy","new":289.99,"repeat":289.99},{"name":"SuperDrug","new":302.00,"repeat":302.00},{"name":"Boots","new":302.97,"repeat":302.97},{"name":"Voy","new":304.00,"repeat":324.00},{"name":"Juniper","new":304.00,"repeat":304.00},{"name":"Numan","new":309.00,"repeat":309.00},{"name":"MediHealth Direct","new":335.99,"repeat":236.99},{"name":"Lotus Weight Loss","new":479.70,"repeat":246.00},{"name":"Lloyds Pharmacy","new":539.98,"repeat":279.99}],
+'12.5mg':[{"name":"Farmeci","new":207.00,"repeat":207.00},{"name":"Bolt Pharmacy","new":239.00,"repeat":239.00},{"name":"PillTime","new":239.99,"repeat":279.99},{"name":"Pills2U","new":242.99,"repeat":264.99},{"name":"My Online Pharmacy","new":245.00,"repeat":245.00},{"name":"Medicine Market Place","new":246.00,"repeat":246.00},{"name":"Pharmacy2U","new":246.24,"repeat":296.24},{"name":"Get Weightloss","new":247.98,"repeat":247.98},{"name":"Ayp Healthcare","new":247.99,"repeat":247.99},{"name":"OnlineMeds","new":249.99,"repeat":279.99},{"name":"My London Pharmacy","new":251.10,"repeat":279.00},{"name":"PillSphere","new":252.95,"repeat":284.04},{"name":"The Family Chemist","new":254.98,"repeat":259.98},{"name":"Pharmica","new":254.99,"repeat":309.99},{"name":"Envigore","new":255.00,"repeat":329.00},{"name":"Dr Weightmans","new":255.00,"repeat":255.00},{"name":"Swift Doctor","new":255.00,"repeat":265.00},{"name":"Online Clinic","new":255.99,"repeat":319.99},{"name":"WePrescribe","new":256.49,"repeat":284.99},{"name":"The Care Pharmacy","new":257.49,"repeat":279.99},{"name":"Medicspot","new":259.00,"repeat":309.00},{"name":"My Health & Wellness","new":259.99,"repeat":299.99},{"name":"Zava","new":259.99,"repeat":299.99},{"name":"WeightLess","new":260.00,"repeat":295.00},{"name":"Pharmulous","new":264.98,"repeat":259.99},{"name":"Pharmacy Express","new":264.99,"repeat":264.99},{"name":"Slimming Direct","new":265.00,"repeat":260.00},{"name":"Live Well Weight Loss","new":269.00,"repeat":269.00},{"name":"Ashcroft Pharmacy","new":269.99,"repeat":269.99},{"name":"Click 2 Pharmacy","new":269.99,"repeat":269.99},{"name":"Happy Pharmacy","new":269.99,"repeat":269.99},{"name":"Shape8","new":269.99,"repeat":269.99},{"name":"Tribelle","new":270.00,"repeat":270.00},{"name":"Simple Online Pharmacy","new":273.99,"repeat":309.99},{"name":"YourPharmacy","new":274.00,"repeat":289.00},{"name":"Cloud Pharmacy","new":274.99,"repeat":274.99},{"name":"Cuva Health","new":278.98,"repeat":279.99},{"name":"PillSorted","new":279.00,"repeat":299.99},{"name":"Get A Drip","new":279.00,"repeat":279.00},{"name":"Curely","new":280.00,"repeat":280.00},{"name":"Pharmacy Online","new":285.48,"repeat":289.99},{"name":"Private Doc","new":287.00,"repeat":287.00},{"name":"Chemist4U","new":288.00,"repeat":288.00},{"name":"e-Surgery","new":288.96,"repeat":339.95},{"name":"Asda","new":288.97,"repeat":288.97},{"name":"Oxford Online Pharmacy","new":289.98,"repeat":289.98},{"name":"Click Pharmacy","new":289.99,"repeat":289.99},{"name":"Oushk","new":290.00,"repeat":290.00},{"name":"Quickmeds","new":290.94,"repeat":309.95},{"name":"IQ Doctor","new":294.99,"repeat":294.99},{"name":"Pharmacy Advance","new":294.99,"repeat":294.99},{"name":"Hey Slim","new":299.00,"repeat":259.00},{"name":"myBMI","new":299.00,"repeat":299.00},{"name":"MSH Weight Loss","new":299.00,"repeat":299.00},{"name":"Simply Meds Online","new":299.99,"repeat":299.99},{"name":"MedExpress","new":299.99,"repeat":299.99},{"name":"The Independent Pharmacy","new":304.99,"repeat":304.99},{"name":"Well Pharmacy","new":309.00,"repeat":309.00},{"name":"Medino","new":309.99,"repeat":309.99},{"name":"SuperDrug","new":314.00,"repeat":314.00},{"name":"Boots","new":314.97,"repeat":314.97},{"name":"Voy","new":324.00,"repeat":344.00},{"name":"Numan","new":329.00,"repeat":329.00},{"name":"Juniper","new":329.00,"repeat":329.00},{"name":"MediHealth Direct","new":349.99,"repeat":256.99},{"name":"Lotus Weight Loss","new":522.60,"repeat":268.00},{"name":"Lloyds Pharmacy","new":579.98,"repeat":299.99}],
+'15mg':[{"name":"Farmeci","new":207.00,"repeat":207.00},{"name":"PillTime","new":249.99,"repeat":299.99},{"name":"Pharmacy2U","new":256.24,"repeat":306.24},{"name":"Bolt Pharmacy","new":259.00,"repeat":259.00},{"name":"Online Clinic","new":263.99,"repeat":329.99},{"name":"Pharmica","new":264.99,"repeat":319.99},{"name":"Medicine Market Place","new":266.00,"repeat":266.00},{"name":"Pills2U","new":267.99,"repeat":289.99},{"name":"My Online Pharmacy","new":269.00,"repeat":269.00},{"name":"My London Pharmacy","new":269.10,"repeat":299.00},{"name":"OnlineMeds","new":269.99,"repeat":299.99},{"name":"My Health & Wellness","new":269.99,"repeat":309.99},{"name":"Zava","new":269.99,"repeat":309.99},{"name":"WePrescribe","new":269.99,"repeat":299.99},{"name":"Get Weightloss","new":270.00,"repeat":270.00},{"name":"PillSphere","new":273.95,"repeat":296.04},{"name":"The Family Chemist","new":274.98,"repeat":279.98},{"name":"Envigore","new":275.00,"repeat":339.00},{"name":"The Care Pharmacy","new":277.49,"repeat":299.99},{"name":"Medicspot","new":279.00,"repeat":329.00},{"name":"Swift Doctor","new":279.00,"repeat":289.00},{"name":"Pharmulous","new":279.98,"repeat":274.99},{"name":"Ayp Healthcare","new":279.99,"repeat":279.99},{"name":"Dr Weightmans","new":280.00,"repeat":280.00},{"name":"YourPharmacy","new":283.00,"repeat":298.00},{"name":"Simple Online Pharmacy","new":283.99,"repeat":319.99},{"name":"Pharmacy Express","new":284.99,"repeat":284.99},{"name":"WeightLess","new":285.00,"repeat":320.00},{"name":"Click 2 Pharmacy","new":288.99,"repeat":288.99},{"name":"PillSorted","new":289.00,"repeat":309.99},{"name":"Live Well Weight Loss","new":289.00,"repeat":289.00},{"name":"Shape8","new":289.99,"repeat":289.99},{"name":"Tribelle","new":290.00,"repeat":290.00},{"name":"Cloud Pharmacy","new":294.99,"repeat":294.99},{"name":"Ashcroft Pharmacy","new":294.99,"repeat":294.99},{"name":"Pharmacy Online","new":295.48,"repeat":299.99},{"name":"Chemist4U","new":298.00,"repeat":298.00},{"name":"Oxford Online Pharmacy","new":298.96,"repeat":298.96},{"name":"Asda","new":298.97,"repeat":298.97},{"name":"Cuva Health","new":298.98,"repeat":299.99},{"name":"Get A Drip","new":299.00,"repeat":299.00},{"name":"Click Pharmacy","new":299.99,"repeat":299.99},{"name":"Happy Pharmacy","new":299.99,"repeat":299.99},{"name":"Slimming Direct","new":300.00,"repeat":295.00},{"name":"Curely","new":300.00,"repeat":300.00},{"name":"IQ Doctor","new":304.99,"repeat":304.99},{"name":"Quickmeds","new":305.94,"repeat":329.95},{"name":"e-Surgery","new":305.96,"repeat":359.95},{"name":"Private Doc","new":307.00,"repeat":307.00},{"name":"Hey Slim","new":309.00,"repeat":269.00},{"name":"myBMI","new":309.00,"repeat":309.00},{"name":"MedExpress","new":309.99,"repeat":309.99},{"name":"Oushk","new":310.00,"repeat":310.00},{"name":"Pharmacy Advance","new":314.99,"repeat":314.99},{"name":"MSH Weight Loss","new":319.00,"repeat":319.00},{"name":"Well Pharmacy","new":319.00,"repeat":319.00},{"name":"Simply Meds Online","new":319.99,"repeat":319.99},{"name":"Medino","new":319.99,"repeat":319.99},{"name":"The Independent Pharmacy","new":324.99,"repeat":324.99},{"name":"SuperDrug","new":334.00,"repeat":334.00},{"name":"Boots","new":334.97,"repeat":334.97},{"name":"Numan","new":339.00,"repeat":339.00},{"name":"Voy","new":339.00,"repeat":359.00},{"name":"Juniper","new":339.00,"repeat":339.00},{"name":"MediHealth Direct","new":349.99,"repeat":276.99},{"name":"Lotus Weight Loss","new":563.55,"repeat":289.00},{"name":"Lloyds Pharmacy","new":599.98,"repeat":309.99}]
+};
+
+var fmt=function(v){return v!=null?'\u00A3'+v.toFixed(2):'\u2014'};
+var fmtInt=function(v){return v!=null?'\u00A3'+Math.round(v):'\u2014'};
+var catClass={ours:'tag-ours',glasgow:'tag-glasgow',edinburgh:'tag-edinburgh',aberdeen:'tag-aberdeen',dundee:'tag-dundee',scotland:'tag-scotland','uk-chain':'tag-uk-chain',online:'tag-online'};
+
+function switchTab(idx){
+  document.querySelectorAll('.tab-btn').forEach(function(b,i){b.classList.toggle('active',i===idx)});
+  document.querySelectorAll('.tab-content').forEach(function(c,i){c.classList.toggle('active',i===idx)});
+}
+
+function renderTab1(){
+  var el=document.getElementById('tab-0');
+  var comps=providers.filter(function(p){return !p.isOurs&&p.prices.some(function(v){return v!=null})});
+
+  var marketAvgs=strengths.map(function(_,i){
+    var vals=comps.map(function(p){return p.prices[i]}).filter(function(v){return v!=null});
+    return vals.reduce(function(a,b){return a+b},0)/vals.length;
+  });
+  var avgSaving=marketAvgs.reduce(function(a,v,i){return a+v-ourPrices[i]},0)/6;
+
+  var cheaperCount=0,totalComps=0;
+  comps.forEach(function(c){
+    if(!c.prices.every(function(v){return v!=null}))return;
+    totalComps++;
+    if(strengths.every(function(_,i){return ourPrices[i]<=c.prices[i]}))cheaperCount++;
+  });
+
+  var ranks=strengths.map(function(_,i){
+    var allP=providers.filter(function(p){return p.prices[i]!=null}).map(function(p){return {name:p.name,price:p.prices[i],isOurs:!!p.isOurs}});
+    allP.sort(function(a,b){return a.price-b.price});
+    return allP.findIndex(function(p){return p.isOurs})+1;
+  });
+  var avgRank=(ranks.reduce(function(a,b){return a+b},0)/6).toFixed(1);
+
+  var maxP=0,maxName='';
+  comps.forEach(function(c){if(c.prices[5]!=null&&c.prices[5]>maxP){maxP=c.prices[5];maxName=c.name}});
+
+  var html='<div class="kpi-row">';
+  html+='<div class="kpi"><div class="kpi-label">Providers Tracked</div><div class="kpi-value">29</div><div class="kpi-detail">28 competitors + ours</div></div>';
+  html+='<div class="kpi green"><div class="kpi-label">Avg Saving vs Market</div><div class="kpi-value">\u00A3'+avgSaving.toFixed(0)+'</div><div class="kpi-detail">per strength on average</div></div>';
+  html+='<div class="kpi green"><div class="kpi-label">Cheaper Than</div><div class="kpi-value">'+cheaperCount+'/'+totalComps+'</div><div class="kpi-detail">competitors at all strengths</div></div>';
+  html+='<div class="kpi"><div class="kpi-label">Average Market Rank</div><div class="kpi-value">#'+avgRank+'</div><div class="kpi-detail">across all 6 strengths</div></div>';
+  html+='<div class="kpi"><div class="kpi-label">Most Expensive 15mg</div><div class="kpi-value">\u00A3'+maxP.toFixed(0)+'</div><div class="kpi-detail">'+maxName+'</div></div>';
+  html+='</div>';
+
+  // Chart grid
+  html+='<div class="grid-2">';
+
+  // Bar chart
+  html+='<div class="card"><h3>Price Range by Strength <span class="badge">Green = Ours</span></h3>';
+  var maxChart=400;
+  strengths.forEach(function(s,i){
+    var vals=comps.map(function(p){return p.prices[i]}).filter(function(v){return v!=null});
+    var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+    var leftPct=(mn/maxChart)*100;
+    var widthPct=((mx-mn)/maxChart)*100;
+    var ourPct=(ourPrices[i]/maxChart)*100;
+    html+='<div class="bar-group"><div class="bar-label">'+s+'</div>';
+    html+='<div class="bar-track">';
+    html+='<div class="bar-range" style="left:'+leftPct+'%;width:'+widthPct+'%"></div>';
+    html+='<span class="bar-min-label">\u00A3'+Math.round(mn)+'</span>';
+    html+='<span class="bar-max-label">\u00A3'+Math.round(mx)+'</span>';
+    html+='<div class="bar-ours" style="left:'+ourPct+'%" data-price="\u00A3'+ourPrices[i]+'"></div>';
+    html+='</div></div>';
+  });
+  html+='</div>';
+
+  // Benchmark table
+  html+='<div class="card"><h3>Benchmark Summary</h3><div class="table-scroll"><table>';
+  html+='<tr><th>Strength</th><th>Ours</th><th>Mkt Avg</th><th>Cheapest</th><th>Most Exp</th><th>Saving vs Avg</th><th>Rank</th></tr>';
+  strengths.forEach(function(s,i){
+    var vals=comps.map(function(p){return p.prices[i]}).filter(function(v){return v!=null});
+    var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+    var saving=marketAvgs[i]-ourPrices[i];
+    html+='<tr><td><strong>'+s+'</strong></td><td class="price-cell" style="color:#059669">'+fmtInt(ourPrices[i])+'</td>';
+    html+='<td class="price-cell">'+fmtInt(marketAvgs[i])+'</td><td class="price-cell">'+fmt(mn)+'</td><td class="price-cell">'+fmt(mx)+'</td>';
+    html+='<td class="saving">\u00A3'+saving.toFixed(0)+'</td><td><span class="rank-badge">#'+ranks[i]+'</span></td></tr>';
+  });
+  html+='</table></div></div>';
+  html+='</div>';
+
+  // vs Cheapest split cards
+  var cheapestOverall=strengths.map(function(_,i){
+    var mn=Infinity,name='';
+    comps.forEach(function(c){if(c.prices[i]!=null&&c.prices[i]<mn){mn=c.prices[i];name=c.name}});
+    return {price:mn,name:name};
+  });
+  var inPersonScotland=providers.filter(function(p){return !p.isOurs&&p.inPerson&&['glasgow','edinburgh','aberdeen','dundee','scotland'].indexOf(p.cat)!==-1});
+  var cheapestInPerson=strengths.map(function(_,i){
+    var mn=Infinity,name='';
+    inPersonScotland.forEach(function(c){if(c.prices[i]!=null&&c.prices[i]<mn){mn=c.prices[i];name=c.name}});
+    return {price:mn===Infinity?null:mn,name:name};
+  });
+
+  html+='<div class="split-cards">';
+  html+='<div class="split-card"><h3>vs Cheapest Overall</h3>';
+  html+='<div class="sc-sub">Note: cheapest are typically first-order discount prices from online-only pharmacies</div>';
+  html+='<table><tr><th>Strength</th><th>Ours</th><th>Cheapest</th><th>Diff</th><th>Provider</th></tr>';
+  strengths.forEach(function(s,i){
+    var diff=ourPrices[i]-cheapestOverall[i].price;
+    var cls=diff<=0?'diff-positive':'diff-negative';
+    var sign=diff<=0?'\u2212':'+';
+    html+='<tr><td>'+s+'</td><td class="price-cell" style="color:#059669">'+fmtInt(ourPrices[i])+'</td><td class="price-cell">'+fmt(cheapestOverall[i].price)+'</td>';
+    html+='<td class="'+cls+'">'+sign+'\u00A3'+Math.abs(diff).toFixed(2)+'</td><td style="font-size:.72rem">'+cheapestOverall[i].name+'</td></tr>';
+  });
+  html+='</table></div>';
+
+  html+='<div class="split-card"><h3>vs Cheapest In-Person Scotland</h3>';
+  html+='<div class="sc-sub">We beat every in-person clinic in Scotland at every strength</div>';
+  html+='<table><tr><th>Strength</th><th>Ours</th><th>Cheapest</th><th>Saving</th><th>Provider</th></tr>';
+  strengths.forEach(function(s,i){
+    if(cheapestInPerson[i].price!=null){
+      var saving=cheapestInPerson[i].price-ourPrices[i];
+      html+='<tr><td>'+s+'</td><td class="price-cell" style="color:#059669">'+fmtInt(ourPrices[i])+'</td><td class="price-cell">'+fmt(cheapestInPerson[i].price)+'</td>';
+      html+='<td class="diff-positive">\u00A3'+saving.toFixed(0)+'</td><td style="font-size:.72rem">'+cheapestInPerson[i].name+'</td></tr>';
+    }
+  });
+  html+='</table></div></div>';
+
+  // Winner banner
+  html+='<div class="winner-banner">Cheapest In-Person Provider in Scotland &mdash; at Every Strength';
+  html+='<div class="winner-sub">All-inclusive pricing: consultation + medication + needles + free P&amp;P</div></div>';
+
+  // In-Person Rank Table
+  var inPersonAll=providers.filter(function(p){return p.inPerson&&p.prices.some(function(v){return v!=null})});
+  inPersonAll.sort(function(a,b){
+    var aVals=a.prices.filter(function(v){return v!=null});
+    var bVals=b.prices.filter(function(v){return v!=null});
+    var aAvg=aVals.reduce(function(s,v){return s+v},0)/aVals.length;
+    var bAvg=bVals.reduce(function(s,v){return s+v},0)/bVals.length;
+    return aAvg-bAvg;
+  });
+
+  html+='<div class="card"><h3>In-Person Provider Rankings <span class="badge">Sorted by Average Price</span></h3><div class="table-scroll"><table>';
+  html+='<tr><th>#</th><th>Provider</th><th>Location</th>';
+  strengths.forEach(function(s){html+='<th>'+s+'</th>'});
+  html+='<th>Avg</th></tr>';
+  inPersonAll.forEach(function(p,idx){
+    var cls=p.isOurs?'row-ours':'';
+    var vals=p.prices.filter(function(v){return v!=null});
+    var avg=vals.length?vals.reduce(function(a,b){return a+b},0)/vals.length:null;
+    html+='<tr class="'+cls+'"><td>'+(idx+1)+'</td><td>'+p.name+'</td><td><span class="tag '+(catClass[p.cat]||'')+'">'+p.location+'</span></td>';
+    strengths.forEach(function(_,i){html+='<td class="price-cell">'+(p.prices[i]!=null?fmt(p.prices[i]):'<span class="na-cell">\u2014</span>')+'</td>'});
+    html+='<td class="price-cell" style="font-weight:700">'+(avg!=null?fmtInt(avg):'\u2014')+'</td></tr>';
+  });
+  html+='</table></div></div>';
+
+  // Heatmap: Scotland In-Person
+  var scotlandInPerson=providers.filter(function(p){return p.inPerson&&['ours','glasgow','edinburgh','aberdeen','dundee','scotland'].indexOf(p.cat)!==-1&&p.prices.some(function(v){return v!=null})});
+  scotlandInPerson.sort(function(a,b){
+    var aVals=a.prices.filter(function(v){return v!=null});
+    var bVals=b.prices.filter(function(v){return v!=null});
+    return (aVals.reduce(function(s,v){return s+v},0)/aVals.length)-(bVals.reduce(function(s,v){return s+v},0)/bVals.length);
+  });
+
+  var heatRanges=strengths.map(function(_,i){
+    var vals=scotlandInPerson.map(function(p){return p.prices[i]}).filter(function(v){return v!=null});
+    return {min:Math.min.apply(null,vals),max:Math.max.apply(null,vals)};
+  });
+
+  function heatClass(val,si,isOurs){
+    if(isOurs)return 'heat-ours';
+    if(val==null)return '';
+    var r=heatRanges[si];
+    if(r.max===r.min)return 'heat-mid';
+    var pct=(val-r.min)/(r.max-r.min);
+    if(pct<=0.15)return 'heat-cheapest';
+    if(pct<=0.4)return 'heat-cheap';
+    if(pct<=0.6)return 'heat-mid';
+    if(pct<=0.8)return 'heat-expensive';
+    return 'heat-most';
+  }
+
+  html+='<div class="card"><h3>Heatmap: Scotland In-Person Clinics</h3><div class="table-scroll"><table class="heatmap-table">';
+  html+='<tr><th>Provider</th><th>Location</th>';
+  strengths.forEach(function(s){html+='<th>'+s+'</th>'});
+  html+='</tr>';
+  scotlandInPerson.forEach(function(p){
+    var cls=p.isOurs?'row-ours':'';
+    html+='<tr class="'+cls+'"><td style="text-align:left;font-weight:600">'+p.name+'</td><td style="text-align:left"><span class="tag '+(catClass[p.cat]||'')+'">'+p.location+'</span></td>';
+    strengths.forEach(function(_,i){
+      var hc=heatClass(p.prices[i],i,p.isOurs);
+      html+='<td class="'+hc+'">'+(p.prices[i]!=null?fmt(p.prices[i]):'\u2014')+'</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</table></div></div>';
+
+  // Full provider table
+  html+='<div class="card"><h3>Full Provider Directory</h3>';
+  html+='<div class="filter-bar" id="filter-bar">';
+  var filters=[['all','All'],['ours','Our Pricing'],['glasgow','Glasgow'],['edinburgh','Edinburgh'],['aberdeen','Aberdeen'],['dundee','Dundee'],['scotland','Scotland'],['uk-chain','UK Chains'],['online','Online'],['in-person','In-Person Only'],['with-pricing','With Pricing Only']];
+  filters.forEach(function(f){html+='<button class="filter-btn'+(f[0]==='all'?' active':'')+'" data-filter="'+f[0]+'">'+f[1]+'</button>'});
+  html+='</div>';
+  html+='<div class="table-scroll"><table id="provider-table">';
+  html+='<tr><th>Provider</th><th>Location</th><th>Type</th>';
+  strengths.forEach(function(s){html+='<th>'+s+'</th>'});
+  html+='<th>Consultation</th><th>P&amp;P / Delivery</th><th>Notes</th><th>Source</th></tr>';
+  providers.forEach(function(p){
+    var filterCats=[p.cat];
+    if(p.inPerson)filterCats.push('in-person');
+    if(p.prices.some(function(v){return v!=null}))filterCats.push('with-pricing');
+    if(['glasgow','edinburgh','aberdeen','dundee','scotland'].indexOf(p.cat)!==-1)filterCats.push('scotland-region');
+    var cls=p.isOurs?'row-ours':'';
+    html+='<tr class="'+cls+'" data-cats="'+filterCats.join(',')+'">';
+    html+='<td style="font-weight:600;white-space:nowrap">'+p.name+'</td>';
+    html+='<td><span class="tag '+(catClass[p.cat]||'')+'">'+p.location+'</span></td>';
+    html+='<td style="font-size:.72rem">'+p.type+'</td>';
+    strengths.forEach(function(_,i){html+='<td class="price-cell">'+(p.prices[i]!=null?fmt(p.prices[i]):'<span class="na-cell">\u2014</span>')+'</td>'});
+    html+='<td style="font-size:.72rem">'+p.consult+'</td>';
+    html+='<td style="font-size:.72rem;max-width:160px">'+(p.pp||'\u2014')+'</td>';
+    html+='<td style="font-size:.72rem;max-width:200px">'+p.notes+'</td>';
+    html+='<td>'+(p.url?'<a href="'+p.url+'" target="_blank" class="view-btn">View</a>':'\u2014')+'</td></tr>';
+  });
+  html+='</table></div></div>';
+
+  el.innerHTML=html;
+
+  document.getElementById('filter-bar').addEventListener('click',function(e){
+    if(!e.target.classList.contains('filter-btn'))return;
+    document.querySelectorAll('#filter-bar .filter-btn').forEach(function(b){b.classList.remove('active')});
+    e.target.classList.add('active');
+    var f=e.target.dataset.filter;
+    document.querySelectorAll('#provider-table tr[data-cats]').forEach(function(row){
+      var cats=row.dataset.cats;
+      if(f==='all')row.style.display='';
+      else if(f==='scotland')row.style.display=(cats.indexOf('scotland-region')!==-1||cats.indexOf('scotland')!==-1)?'':'none';
+      else row.style.display=cats.indexOf(f)!==-1?'':'none';
+    });
+  });
+}
+
+function renderTab2(){
+  var el=document.getElementById('tab-1');
+  var totalPharmacies=67;
+
+  function getRankInfo(strengthKey,si){
+    var ourP=ourPrices[si];
+    var dataN=jaro[strengthKey].slice().sort(function(a,b){return a.new-b.new});
+    var dataR=jaro[strengthKey].slice().sort(function(a,b){return a.repeat-b.repeat});
+    var newRank=1;
+    dataN.forEach(function(d){if(d.new<ourP)newRank++});
+    var repRank=1;
+    dataR.forEach(function(d){if(d.repeat<ourP)repRank++});
+    var beatNew=0,beatRepeat=0;
+    jaro[strengthKey].forEach(function(d){if(ourP<=d.new)beatNew++;if(ourP<=d.repeat)beatRepeat++});
+    var avgNew=jaro[strengthKey].reduce(function(s,d){return s+d.new},0)/totalPharmacies;
+    var avgRepeat=jaro[strengthKey].reduce(function(s,d){return s+d.repeat},0)/totalPharmacies;
+    return {newRank:newRank,repRank:repRank,beatNew:beatNew,beatRepeat:beatRepeat,avgNew:avgNew,avgRepeat:avgRepeat};
+  }
+
+  var allRanks=strengths.map(function(s,i){return getRankInfo(s,i)});
+  var newRankMin=Math.min.apply(null,allRanks.map(function(r){return r.newRank}));
+  var newRankMax=Math.max.apply(null,allRanks.map(function(r){return r.newRank}));
+  var repRankMin=Math.min.apply(null,allRanks.map(function(r){return r.repRank}));
+  var repRankMax=Math.max.apply(null,allRanks.map(function(r){return r.repRank}));
+  var beatRepMin=Math.min.apply(null,allRanks.map(function(r){return r.beatRepeat}));
+  var beatRepMax=Math.max.apply(null,allRanks.map(function(r){return r.beatRepeat}));
+
+  var html='<div class="kpi-row">';
+  html+='<div class="kpi"><div class="kpi-label">Total Pharmacies</div><div class="kpi-value">67</div><div class="kpi-detail">GPhC-registered, via JaroPrices</div></div>';
+  html+='<div class="kpi"><div class="kpi-label">New Patient Rank</div><div class="kpi-value">#'+newRankMin+'\u2013'+newRankMax+'</div><div class="kpi-detail">depending on strength</div></div>';
+  html+='<div class="kpi green"><div class="kpi-label">Repeat Patient Rank</div><div class="kpi-value">#'+repRankMin+'\u2013'+repRankMax+'</div><div class="kpi-detail">depending on strength</div></div>';
+  html+='<div class="kpi green"><div class="kpi-label">Beat on Repeat</div><div class="kpi-value">'+beatRepMin+'\u2013'+beatRepMax+'</div><div class="kpi-detail">out of 67 pharmacies</div></div>';
+  html+='</div>';
+
+  // Summary table
+  html+='<div class="card"><h3>Per-Strength Summary vs 67 UK Pharmacies</h3><div class="table-scroll"><table>';
+  html+='<tr><th>Strength</th><th>Our Price</th><th>New Rank</th><th>Repeat Rank</th><th>Beat (New)</th><th>Beat (Repeat)</th><th>Avg New</th><th>Avg Repeat</th></tr>';
+  strengths.forEach(function(s,i){
+    var r=allRanks[i];
+    html+='<tr><td><strong>'+s+'</strong></td><td class="price-cell" style="color:#059669">'+fmtInt(ourPrices[i])+'</td>';
+    html+='<td><span class="rank-badge">#'+r.newRank+'</span></td><td><span class="rank-badge">#'+r.repRank+'</span></td>';
+    html+='<td>'+r.beatNew+'/67</td><td class="saving">'+r.beatRepeat+'/67</td>';
+    html+='<td class="price-cell">'+fmtInt(r.avgNew)+'</td><td class="price-cell">'+fmtInt(r.avgRepeat)+'</td></tr>';
+  });
+  html+='</table></div></div>';
+
+  // Strength selector + tables
+  html+='<div class="card"><h3>Full 67-Pharmacy Rankings</h3>';
+  html+='<div class="strength-tabs" id="strength-tabs">';
+  html+='<button class="strength-tab active" data-str="all">All</button>';
+  strengths.forEach(function(s){html+='<button class="strength-tab" data-str="'+s+'">'+s+'</button>'});
+  html+='</div><div id="jaro-tables"></div></div>';
+
+  el.innerHTML=html;
+
+  var tabsEl=document.getElementById('strength-tabs');
+  var tablesEl=document.getElementById('jaro-tables');
+
+  function buildOneTable(str,si){
+    var ourP=ourPrices[si];
+    var data=jaro[str].map(function(d){return {name:d.name,new:d.new,repeat:d.repeat,isOurs:false}});
+    data.push({name:'OUR PROPOSED PRICING',new:ourP,repeat:ourP,isOurs:true});
+    data.sort(function(a,b){return a.new-b.new});
+
+    var h='<h4 style="margin:20px 0 8px;font-size:.95rem;font-weight:700">'+str+'</h4><div class="table-scroll"><table>';
+    h+='<tr><th>#</th><th>Pharmacy</th><th>New Patient</th><th>Repeat Patient</th><th>vs Ours (New)</th><th>vs Ours (Repeat)</th></tr>';
+    data.forEach(function(d,idx){
+      var cls=d.isOurs?'row-ours':'';
+      var diffNew=d.new-ourP;
+      var diffRep=d.repeat-ourP;
+      var diffNewStr,diffRepStr;
+      if(d.isOurs){diffNewStr='\u2014';diffRepStr='\u2014'}
+      else{
+        if(diffNew>0)diffNewStr='<span class="saving">+\u00A3'+diffNew.toFixed(2)+'</span>';
+        else if(diffNew<0)diffNewStr='<span class="more-expensive">\u2212\u00A3'+Math.abs(diffNew).toFixed(2)+'</span>';
+        else diffNewStr='\u2014';
+        if(diffRep>0)diffRepStr='<span class="saving">+\u00A3'+diffRep.toFixed(2)+'</span>';
+        else if(diffRep<0)diffRepStr='<span class="more-expensive">\u2212\u00A3'+Math.abs(diffRep).toFixed(2)+'</span>';
+        else diffRepStr='\u2014';
+      }
+      h+='<tr class="'+cls+'"><td>'+(idx+1)+'</td><td style="font-weight:'+(d.isOurs?700:500)+'">'+d.name+'</td>';
+      h+='<td class="price-cell">'+fmt(d.new)+'</td><td class="price-cell">'+fmt(d.repeat)+'</td>';
+      h+='<td>'+diffNewStr+'</td><td>'+diffRepStr+'</td></tr>';
+    });
+    h+='</table></div>';
+    return h;
+  }
+
+  function renderStrengthTable(str){
+    if(str==='all'){
+      var h='';
+      strengths.forEach(function(s,si){h+=buildOneTable(s,si)});
+      tablesEl.innerHTML=h;
+    } else {
+      var si=strengths.indexOf(str);
+      tablesEl.innerHTML=buildOneTable(str,si);
+    }
+  }
+
+  renderStrengthTable('all');
+
+  tabsEl.addEventListener('click',function(e){
+    if(!e.target.classList.contains('strength-tab'))return;
+    tabsEl.querySelectorAll('.strength-tab').forEach(function(b){b.classList.remove('active')});
+    e.target.classList.add('active');
+    renderStrengthTable(e.target.dataset.str);
+  });
+}
+
+renderTab1();
+renderTab2();
+</script>
+</body>
+</html>
