@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pharmacy365 — P&L Dashboard</title>
+<style>
+:root{
+  --bg:#f5f6fa;--card:#fff;--border:#e0e3eb;--text:#1e2330;--muted:#6b7280;
+  --accent:#10b981;--accent-dark:#065f46;--accent-light:#d1fae5;
+  --blue:#2563eb;--blue-bg:#eff6ff;--red:#dc2626;--red-bg:#fef2f2;
+  --orange:#d97706;--orange-bg:#fffbeb;--purple:#7c3aed;--purple-bg:#f3f0ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);padding:24px;min-height:100vh}
+.pw-overlay{position:fixed;inset:0;background:#1e2330;z-index:1000;display:flex;align-items:center;justify-content:center}
+.pw-box{background:#fff;padding:32px 40px;border-radius:12px;width:340px;text-align:center}
+.pw-box h2{font-size:18px;margin-bottom:6px;color:var(--accent-dark)}
+.pw-box p{font-size:13px;color:var(--muted);margin-bottom:18px}
+.pw-box input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:10px}
+.pw-box button{width:100%;padding:10px;background:var(--accent);color:#fff;border:0;border-radius:8px;font-weight:600;cursor:pointer}
+.pw-box .err{color:var(--red);font-size:12px;margin-top:6px;display:none}
+.header{text-align:center;margin-bottom:24px;padding-bottom:20px;border-bottom:2px solid var(--border)}
+.header h1{font-size:26px;font-weight:700;color:var(--accent-dark)}
+.header p{color:var(--muted);font-size:13px;margin-top:4px}
+.header .badge{display:inline-block;background:var(--accent);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;margin-top:8px}
+.section{margin-bottom:24px}
+.section-title{font-size:15px;font-weight:700;margin-bottom:12px;padding-left:12px;border-left:4px solid var(--accent);color:var(--text)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.kpi.green{background:var(--accent-light);border-color:#a7f3d0}
+.kpi.red{background:var(--red-bg);border-color:#fecaca}
+.kpi.blue{background:var(--blue-bg);border-color:#bfdbfe}
+.kpi.orange{background:var(--orange-bg);border-color:#fed7aa}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.kpi-value{font-size:24px;font-weight:800;color:var(--text)}
+.kpi-detail{font-size:11px;color:var(--muted);margin-top:4px}
+.kpi.green .kpi-value{color:var(--accent-dark)}
+.kpi.red .kpi-value{color:var(--red)}
+.kpi.blue .kpi-value{color:var(--blue)}
+.kpi.orange .kpi-value{color:var(--orange)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:2px solid var(--border);font-weight:600}
+td{padding:8px;border-bottom:1px solid #f0f1f5}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.input-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f1f5}
+.input-row:last-child{border-bottom:0}
+.input-row label{font-size:13px;flex:1}
+.input-row input[type="number"]{width:100px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.input-row .help{font-size:10px;color:var(--muted);margin-left:8px}
+.slider-row{margin-bottom:14px}
+.slider-row .top{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px}
+.slider-row .top .lbl{font-weight:600}
+.slider-row .top .val{color:var(--accent-dark);font-weight:700;font-variant-numeric:tabular-nums}
+.slider-row input[type="range"]{width:100%;accent-color:var(--accent)}
+.mix-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+@media(max-width:700px){.mix-grid{grid-template-columns:1fr}}
+.row-total{padding:10px 12px;border-top:2px solid var(--border);font-weight:700;display:flex;justify-content:space-between;background:#f8f9fc;border-radius:0 0 8px 8px;margin-top:6px}
+.row-total.green{background:var(--accent-light);color:var(--accent-dark)}
+.row-total.red{background:var(--red-bg);color:var(--red)}
+.scenarios-table{font-size:11px;background:var(--card)}
+.scenarios-table th{background:#f8f9fc;text-align:right;padding:10px 8px}
+.scenarios-table th:first-child{text-align:left}
+.scenarios-table td{padding:8px;text-align:right;font-variant-numeric:tabular-nums}
+.scenarios-table td:first-child{text-align:left;font-weight:500}
+.scenarios-table tr.bold td{font-weight:700;background:#fafbfd}
+.scenarios-table tr.profit td{font-weight:800;background:var(--accent-light);color:var(--accent-dark);border-bottom:0}
+.scenarios-table tr.loss td{font-weight:800;background:var(--red-bg);color:var(--red);border-bottom:0}
+.scenarios-table .breakeven{background:#fef3c7;font-weight:700}
+.tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:8px;font-weight:600}
+.tag-fixed{background:var(--purple-bg);color:var(--purple)}
+.tag-var{background:var(--blue-bg);color:var(--blue)}
+.chart-bar{display:flex;align-items:flex-end;gap:4px;height:160px;padding:10px 0;border-bottom:1px solid var(--border)}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative}
+.chart-col .bar{width:100%;border-radius:4px 4px 0 0;min-height:2px;transition:height .3s}
+.chart-col .lbl{font-size:10px;margin-top:6px;color:var(--muted)}
+.chart-col .val{font-size:11px;font-weight:700;margin-bottom:4px}
+.chart-col.profit .bar{background:linear-gradient(180deg,var(--accent),var(--accent-dark))}
+.chart-col.profit .val{color:var(--accent-dark)}
+.chart-col.loss .bar{background:linear-gradient(180deg,#fca5a5,var(--red))}
+.chart-col.loss .val{color:var(--red)}
+.chart-col.be{background:linear-gradient(180deg,#fde68a,#f59e0b)}
+.note{font-size:11px;color:var(--muted);background:#f8f9fc;border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 6px 6px 0;margin-top:10px;line-height:1.5}
+.footer{text-align:center;color:var(--muted);font-size:11px;margin-top:32px;padding-top:18px;border-top:1px solid var(--border);line-height:1.7}
+.controls-card h3{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px;font-weight:600}
+.toggle-btns{display:flex;gap:6px;margin-bottom:12px}
+.toggle-btns button{flex:1;padding:6px;background:#fff;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--muted)}
+.toggle-btns button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.preset-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.preset-row button{padding:5px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px}
+.preset-row button:hover{background:var(--accent-light);border-color:var(--accent)}
+.preset-row button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.divider{height:1px;background:var(--border);margin:14px 0}
+</style>
+</head>
+<body>
+
+<div class="pw-overlay" id="pw">
+  <div class="pw-box">
+    <h2>Pharmacy365 P&L</h2>
+    <p>Enter password to access</p>
+    <input type="password" id="pwIn" placeholder="Password" autofocus>
+    <button onclick="checkPw()">Unlock</button>
+    <div class="err" id="pwErr">Incorrect password</div>
+  </div>
+</div>
+
+<div class="header">
+  <h1>Pharmacy365 — P&L Dashboard</h1>
+  <p>White-label B2B dispensing model · interactive financial projection</p>
+  <span class="badge">Live calculations · adjust any input</span>
+</div>
+
+<!-- PRICING HERO -->
+<div class="section">
+  <div class="section-title">Wholesale Pricing & Per-Pen Margin</div>
+  <div class="card">
+    <div class="grid-4" id="pricingHero"></div>
+  </div>
+</div>
+
+<!-- KPI ROW -->
+<div class="section">
+  <div class="grid-4" id="kpiRow"></div>
+</div>
+
+<!-- INPUTS -->
+<div class="section">
+  <div class="section-title">Operating Assumptions (editable)</div>
+  <div class="grid-2">
+
+    <!-- VOLUME & MIX -->
+    <div class="card controls-card">
+      <h3>Volume & Strength Mix</h3>
+      <div class="slider-row">
+        <div class="top"><span class="lbl">Monthly Pen Volume</span><span class="val" id="volVal">500</span></div>
+        <input type="range" id="vol" min="50" max="5000" step="50" value="500">
+      </div>
+      <div class="preset-row">
+        <button onclick="setVolume(100)">100</button>
+        <button onclick="setVolume(250)">250</button>
+        <button onclick="setVolume(500)" class="active">500</button>
+        <button onclick="setVolume(1000)">1,000</button>
+        <button onclick="setVolume(2500)">2,500</button>
+        <button onclick="setVolume(5000)">5,000</button>
+      </div>
+      <div class="divider"></div>
+      <h3>Strength Mix (must total 100%)</h3>
+      <div class="mix-grid" id="mixGrid"></div>
+      <div class="row-total" id="mixTotal">Total: 100%</div>
+      <div class="preset-row">
+        <button onclick="applyMix('titration')" class="active">Steady-state titration</button>
+        <button onclick="applyMix('starter')">New patient heavy</button>
+        <button onclick="applyMix('mature')">Mature patient base</button>
+      </div>
+    </div>
+
+    <!-- OPEX -->
+    <div class="card controls-card">
+      <h3>Operating Expenses (annual £)</h3>
+      <div class="input-row"><label>Pharmacist (Responsible Pharmacist)</label><input type="number" id="opex_rp" value="55000"><span class="help">£/yr</span></div>
+      <div class="input-row"><label>Dispensing technician</label><input type="number" id="opex_tech" value="28000"><span class="help">£/yr</span></div>
+      <div class="input-row"><label>Operations / admin (0.5 FTE)</label><input type="number" id="opex_admin" value="18000"><span class="help">£/yr</span></div>
+      <div class="input-row"><label>Premises / storage</label><input type="number" id="opex_premises" value="12000"><span class="help">£/yr</span></div>
+      <div class="input-row"><label>Software (PMR, platform, ops)</label><input type="number" id="opex_sw" value="6000"><span class="help">£/yr</span></div>
+      <div class="input-row"><label>Insurance & compliance</label><input type="number" id="opex_ins" value="6000"><span class="help">£/yr</span></div>
+      <div class="input-row"><label>Marketing / BD</label><input type="number" id="opex_mktg" value="15000"><span class="help">£/yr</span></div>
+      <div class="input-row"><label>Other / contingency</label><input type="number" id="opex_other" value="8000"><span class="help">£/yr</span></div>
+      <div class="row-total"><span>Total Fixed OpEx</span><span id="fixedOpexTotal">£148,000</span></div>
+      <div class="divider"></div>
+      <h3>Variable Costs (per pen)</h3>
+      <div class="input-row"><label>Packaging / consumables</label><input type="number" id="var_pack" step="0.5" value="2.50"><span class="help">£/pen</span></div>
+      <div class="input-row"><label>Cold-chain shipping (per order)</label><input type="number" id="var_ship" step="0.5" value="10"><span class="help">£/order</span></div>
+      <div class="input-row"><label>Avg pens per shipment</label><input type="number" id="var_perShip" step="1" value="5"><span class="help">pens</span></div>
+      <div class="input-row"><label>Card processing (% revenue)</label><input type="number" id="var_card" step="0.1" value="2.5"><span class="help">%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- P&L OUTPUT -->
+<div class="section">
+  <div class="section-title">Projected P&L (live)</div>
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px;font-weight:600">Monthly P&L</h3>
+      <table id="pnlMonthly"></table>
+    </div>
+    <div class="card">
+      <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px;font-weight:600">Annual P&L</h3>
+      <table id="pnlAnnual"></table>
+    </div>
+  </div>
+</div>
+
+<!-- SCENARIOS -->
+<div class="section">
+  <div class="section-title">Volume Scenarios — Annual View</div>
+  <div class="card">
+    <table class="scenarios-table" id="scenarios"></table>
+    <div class="note" id="bestatNote"></div>
+  </div>
+</div>
+
+<!-- BREAK-EVEN CHART -->
+<div class="section">
+  <div class="section-title">Profit by Volume (annual)</div>
+  <div class="card">
+    <div class="chart-bar" id="profitChart"></div>
+    <div class="note" id="beNote"></div>
+  </div>
+</div>
+
+<div class="footer">
+  All figures GBP. Cost prices ex VAT (post-Lilly rebate).<br>
+  Assumes B2B wholesale model — clinic adds their own retail margin on top.<br>
+  Adjust any input above; everything recalculates instantly.
+</div>
+
+<script>
+function checkPw(){
+  if(document.getElementById('pwIn').value==='mounjaro'){
+    sessionStorage.setItem('pw365','1');
+    document.getElementById('pw').style.display='none';
+  } else {
+    document.getElementById('pwErr').style.display='block';
+  }
+}
+if(sessionStorage.getItem('pw365')==='1') document.getElementById('pw').style.display='none';
+document.getElementById('pwIn').addEventListener('keydown',e=>{if(e.key==='Enter')checkPw()});
+
+// === DATA ===
+const strengths = ['2.5mg','5mg','7.5mg','10mg','12.5mg','15mg'];
+const cost = [119.70,135.00,186.15,210.45,227.70,247.50];
+const wholesale = [150,170,210,240,270,290];
+const margin = wholesale.map((w,i)=>w-cost[i]);
+
+// Mix presets (% of monthly volume per strength)
+const mixPresets = {
+  titration: [12,12,14,25,17,20],   // steady state with continuous acquisition
+  starter:   [25,20,18,15,12,10],   // new patient heavy
+  mature:    [5,8,12,25,20,30]      // mature/maintenance heavy
+};
+let currentMix = [...mixPresets.titration];
+
+function fmt(n){return '£'+n.toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function fmt2(n){return '£'+n.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function pct(n){return n.toFixed(1)+'%'}
+
+// === RENDER PRICING HERO ===
+function renderPricing(){
+  const el=document.getElementById('pricingHero');
+  let html='';
+  strengths.forEach((s,i)=>{
+    html+=`<div style="text-align:center;padding:12px;border-radius:10px;background:#f8fffb;border:1px solid #d1fae5">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">${s}</div>
+      <div style="font-size:22px;font-weight:800;color:var(--accent-dark);margin:4px 0">${fmt(wholesale[i])}</div>
+      <div style="font-size:10px;color:var(--muted)">cost ${fmt2(cost[i])}</div>
+      <div style="font-size:11px;color:var(--accent-dark);font-weight:700;margin-top:4px">+${fmt2(margin[i])} (${pct(margin[i]/cost[i]*100)})</div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+// === MIX UI ===
+function renderMix(){
+  const el=document.getElementById('mixGrid');
+  let html='';
+  strengths.forEach((s,i)=>{
+    html+=`<div class="slider-row" style="margin-bottom:6px">
+      <div class="top"><span class="lbl">${s}</span><span class="val"><span id="mix${i}val">${currentMix[i]}</span>%</span></div>
+      <input type="range" id="mix${i}" min="0" max="100" step="1" value="${currentMix[i]}" oninput="updateMix(${i},this.value)">
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+function updateMix(i,v){
+  currentMix[i]=parseInt(v);
+  document.getElementById('mix'+i+'val').textContent=v;
+  const total=currentMix.reduce((a,b)=>a+b,0);
+  const totalEl=document.getElementById('mixTotal');
+  totalEl.textContent='Total: '+total+'%';
+  totalEl.className='row-total '+(total===100?'green':'red');
+  recalc();
+}
+function applyMix(name){
+  currentMix=[...mixPresets[name]];
+  document.querySelectorAll('.preset-row button').forEach(b=>{
+    if(b.textContent.toLowerCase().includes(name==='titration'?'titration':name==='starter'?'starter':'mature'))b.classList.add('active');
+    else if(b.dataset && b.dataset.preset)b.classList.remove('active');
+  });
+  // Reset preset toggle visually
+  ['titration','starter','mature'].forEach((p,idx)=>{
+    const btn = document.querySelectorAll('.preset-row')[1].children[idx];
+    if(btn) btn.classList.toggle('active', p===name);
+  });
+  renderMix();
+  recalc();
+}
+
+// === VOLUME ===
+function setVolume(v){
+  document.getElementById('vol').value=v;
+  document.getElementById('volVal').textContent=v.toLocaleString();
+  document.querySelectorAll('.preset-row')[0].querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('active', parseInt(b.textContent.replace(/[^0-9]/g,''))===v);
+  });
+  recalc();
+}
+document.getElementById('vol').addEventListener('input',e=>{
+  document.getElementById('volVal').textContent=parseInt(e.target.value).toLocaleString();
+  document.querySelectorAll('.preset-row')[0].querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  recalc();
+});
+
+// === RECALC P&L ===
+function getOpex(){
+  const fixed = ['rp','tech','admin','premises','sw','ins','mktg','other']
+    .reduce((s,k)=>s+(parseFloat(document.getElementById('opex_'+k).value)||0),0);
+  return {
+    fixed: fixed,
+    pack: parseFloat(document.getElementById('var_pack').value)||0,
+    ship: parseFloat(document.getElementById('var_ship').value)||0,
+    perShip: parseFloat(document.getElementById('var_perShip').value)||1,
+    card: parseFloat(document.getElementById('var_card').value)||0
+  };
+}
+
+function calcPnl(monthlyVol){
+  const opex = getOpex();
+  const totalMix = currentMix.reduce((a,b)=>a+b,0);
+  const normMix = totalMix>0 ? currentMix.map(m=>m/totalMix) : currentMix.map(()=>1/6);
+
+  // Per-strength volumes
+  const volByStr = normMix.map(m=>monthlyVol*m);
+  const revenue = volByStr.reduce((s,v,i)=>s+v*wholesale[i],0);
+  const cogs = volByStr.reduce((s,v,i)=>s+v*cost[i],0);
+  const grossProfit = revenue - cogs;
+
+  // Variable costs
+  const varPack = monthlyVol * opex.pack;
+  const varShip = (monthlyVol/opex.perShip) * opex.ship;
+  const varCard = revenue * opex.card/100;
+  const totalVar = varPack + varShip + varCard;
+
+  // Fixed OpEx (monthly = annual/12)
+  const fixedMonthly = opex.fixed/12;
+
+  const ebitda = grossProfit - totalVar - fixedMonthly;
+  const tax = Math.max(0, ebitda * 0.19);
+  const net = ebitda - tax;
+
+  return {
+    revenue, cogs, grossProfit, varPack, varShip, varCard, totalVar,
+    fixedMonthly, ebitda, tax, net,
+    grossMargin: revenue>0 ? grossProfit/revenue*100 : 0,
+    netMargin: revenue>0 ? net/revenue*100 : 0,
+    perPenContribution: monthlyVol>0 ? (grossProfit-totalVar)/monthlyVol : 0
+  };
+}
+
+// === RENDER P&L ===
+function renderPnl(){
+  const vol = parseInt(document.getElementById('vol').value);
+  const m = calcPnl(vol);
+  const a = {
+    revenue: m.revenue*12, cogs: m.cogs*12, grossProfit: m.grossProfit*12,
+    varPack: m.varPack*12, varShip: m.varShip*12, varCard: m.varCard*12, totalVar: m.totalVar*12,
+    fixedMonthly: m.fixedMonthly*12, ebitda: m.ebitda*12, tax: m.tax*12, net: m.net*12,
+    grossMargin: m.grossMargin, netMargin: m.netMargin
+  };
+
+  function row(label,val,opts={}){
+    const cls = opts.bold?'bold':'';
+    const profitCls = opts.highlight==='profit' ? 'profit' : opts.highlight==='loss' && val<0 ? 'loss' : opts.highlight==='profit' && val<0 ? 'loss' : '';
+    return `<tr class="${cls} ${profitCls}"><td>${label}</td><td class="num">${fmt(val)}</td></tr>`;
+  }
+
+  function pnlTable(d){
+    return `<thead><tr><th>Line</th><th class="num">Amount</th></tr></thead><tbody>
+      ${row('Revenue', d.revenue, {bold:true})}
+      ${row('Cost of Goods Sold', -d.cogs)}
+      ${row('Gross Profit', d.grossProfit, {bold:true})}
+      <tr><td colspan="2" style="padding:2px 0;border:0"></td></tr>
+      ${row('Variable: Packaging', -d.varPack)}
+      ${row('Variable: Shipping', -d.varShip)}
+      ${row('Variable: Card processing', -d.varCard)}
+      ${row('Fixed OpEx', -d.fixedMonthly)}
+      <tr><td colspan="2" style="padding:2px 0;border:0"></td></tr>
+      ${row('EBITDA', d.ebitda, {bold:true, highlight:'profit'})}
+      ${row('Corporation Tax (19%)', -d.tax)}
+      ${row('Net Profit', d.net, {bold:true, highlight: d.net>=0?'profit':'loss'})}
+      <tr><td style="padding-top:10px">Gross Margin</td><td class="num">${pct(d.grossMargin)}</td></tr>
+      <tr><td>Net Margin</td><td class="num">${pct(d.netMargin)}</td></tr>
+    </tbody>`;
+  }
+
+  document.getElementById('pnlMonthly').innerHTML = pnlTable(m);
+  document.getElementById('pnlAnnual').innerHTML = pnlTable(a);
+
+  // KPI row
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi green"><div class="kpi-label">Annual Revenue</div><div class="kpi-value">${fmt(a.revenue)}</div><div class="kpi-detail">@ ${vol.toLocaleString()} pens/mo</div></div>
+    <div class="kpi"><div class="kpi-label">Gross Profit (yr)</div><div class="kpi-value">${fmt(a.grossProfit)}</div><div class="kpi-detail">${pct(a.grossMargin)} margin</div></div>
+    <div class="kpi ${a.ebitda>=0?'green':'red'}"><div class="kpi-label">EBITDA (yr)</div><div class="kpi-value">${fmt(a.ebitda)}</div><div class="kpi-detail">${pct(a.ebitda/Math.max(a.revenue,1)*100)} of revenue</div></div>
+    <div class="kpi ${a.net>=0?'green':'red'}"><div class="kpi-label">Net Profit (yr)</div><div class="kpi-value">${fmt(a.net)}</div><div class="kpi-detail">${pct(a.netMargin)} after tax</div></div>
+    <div class="kpi blue"><div class="kpi-label">Per-Pen Contribution</div><div class="kpi-value">${fmt2(m.perPenContribution)}</div><div class="kpi-detail">after variable costs</div></div>
+    <div class="kpi orange"><div class="kpi-label">Break-Even Volume</div><div class="kpi-value" id="beVal">—</div><div class="kpi-detail">pens / month</div></div>
+  `;
+}
+
+// === SCENARIOS TABLE ===
+function renderScenarios(){
+  const tiers = [100,250,500,1000,2500,5000];
+  const els = tiers.map(v=>{const a=calcPnl(v); return {vol:v, m:calcPnl(v), a:{
+    revenue:a.revenue*12,cogs:a.cogs*12,grossProfit:a.grossProfit*12,
+    totalVar:a.totalVar*12,fixedMonthly:a.fixedMonthly*12,ebitda:a.ebitda*12,
+    tax:a.tax*12,net:a.net*12
+  }}});
+
+  // Find break-even tier
+  let beTier = -1;
+  for(let i=0;i<els.length;i++){if(els[i].a.net>=0){beTier=i;break}}
+
+  let h = '<thead><tr><th>Metric</th>';
+  tiers.forEach(v=>h+=`<th class="num">${v.toLocaleString()}/mo</th>`);
+  h+='</tr></thead><tbody>';
+
+  function scenRow(label, getVal, opts={}){
+    let r=`<tr class="${opts.bold?'bold':''} ${opts.highlight||''}"><td>${label}</td>`;
+    els.forEach(e=>{r+=`<td class="num">${getVal(e)}</td>`});
+    return r+'</tr>';
+  }
+
+  h+=scenRow('Revenue', e=>fmt(e.a.revenue), {bold:true});
+  h+=scenRow('COGS', e=>fmt(-e.a.cogs));
+  h+=scenRow('Gross Profit', e=>fmt(e.a.grossProfit), {bold:true});
+  h+=scenRow('Variable Costs', e=>fmt(-e.a.totalVar));
+  h+=scenRow('Fixed OpEx', e=>fmt(-e.a.fixedMonthly));
+  h+=scenRow('EBITDA', e=>fmt(e.a.ebitda), {bold:true});
+  h+=scenRow('Tax (19%)', e=>fmt(-e.a.tax));
+  h+=scenRow('Net Profit', e=>fmt(e.a.net), {bold:true, highlight:'profit'});
+  h+=scenRow('Net Margin', e=>e.a.revenue>0?pct(e.a.net/e.a.revenue*100):'—');
+  h+='</tbody>';
+  document.getElementById('scenarios').innerHTML = h;
+
+  // Note about break-even
+  const noteEl = document.getElementById('bestatNote');
+  if(beTier===-1){
+    noteEl.innerHTML='<strong style="color:var(--red)">⚠ Operation is loss-making at all volumes shown.</strong> Increase volume above 5,000/mo, reduce OpEx, or raise wholesale pricing.';
+  } else if (beTier===0){
+    noteEl.innerHTML='<strong style="color:var(--accent-dark)">✓ Profitable from 100 pens/month.</strong> Strong economics — lean OpEx structure.';
+  } else {
+    noteEl.innerHTML=`<strong style="color:var(--accent-dark)">✓ Crosses break-even between ${tiers[beTier-1].toLocaleString()} and ${tiers[beTier].toLocaleString()} pens/month.</strong> Sustainable from ${tiers[beTier].toLocaleString()}+ pens/month.`;
+  }
+}
+
+// === PROFIT CHART ===
+function renderChart(){
+  const tiers = [100,250,500,1000,2500,5000];
+  const profits = tiers.map(v=>calcPnl(v).net*12);
+  const maxAbs = Math.max(...profits.map(Math.abs), 1);
+
+  // Find break-even via interpolation
+  let bePoint = -1;
+  for(let i=1;i<profits.length;i++){
+    if(profits[i-1]<0 && profits[i]>=0){
+      const ratio = -profits[i-1]/(profits[i]-profits[i-1]);
+      bePoint = tiers[i-1]+(tiers[i]-tiers[i-1])*ratio;
+      break;
+    }
+  }
+  if(profits[0]>=0) bePoint=0;
+
+  let h='';
+  tiers.forEach((v,i)=>{
+    const p=profits[i];
+    const isProfit = p>=0;
+    const heightPct = Math.abs(p)/maxAbs*85;
+    h+=`<div class="chart-col ${isProfit?'profit':'loss'}">
+      <div class="val">${fmt(p)}</div>
+      <div class="bar" style="height:${heightPct}%"></div>
+      <div class="lbl">${v.toLocaleString()}/mo</div>
+    </div>`;
+  });
+  document.getElementById('profitChart').innerHTML = h;
+
+  // Update break-even KPI and note
+  const beKpi = document.getElementById('beVal');
+  const beNoteEl = document.getElementById('beNote');
+  if(bePoint>0){
+    beKpi.textContent = Math.round(bePoint).toLocaleString();
+    beNoteEl.innerHTML = `<strong>Break-even at ~${Math.round(bePoint).toLocaleString()} pens/month.</strong> Below this you operate at a loss; above this every pen contributes positive net profit.`;
+  } else if(bePoint===0){
+    beKpi.textContent = '<100';
+    beNoteEl.innerHTML = '<strong>Profitable at all volumes ≥100 pens/month</strong> — lean fixed costs make this very scalable.';
+  } else {
+    beKpi.textContent = '5,000+';
+    beNoteEl.innerHTML = '<strong style="color:var(--red)">⚠ Loss at all tested volumes.</strong> Either raise prices or reduce fixed costs.';
+  }
+}
+
+// === FIXED OPEX TOTAL ===
+function updateFixedOpexTotal(){
+  const total = ['rp','tech','admin','premises','sw','ins','mktg','other']
+    .reduce((s,k)=>s+(parseFloat(document.getElementById('opex_'+k).value)||0),0);
+  document.getElementById('fixedOpexTotal').textContent = fmt(total);
+}
+
+// === MASTER RECALC ===
+function recalc(){
+  updateFixedOpexTotal();
+  renderPnl();
+  renderScenarios();
+  renderChart();
+}
+
+// Wire up all input changes
+document.querySelectorAll('input[type="number"]').forEach(inp=>{
+  inp.addEventListener('input',recalc);
+});
+
+// Init
+renderPricing();
+renderMix();
+recalc();
+</script>
+</body>
+</html>
